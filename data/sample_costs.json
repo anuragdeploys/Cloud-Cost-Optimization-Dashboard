@@ -1,0 +1,50 @@
+{
+  "currency": "USD",
+  "records": [
+    {
+      "date": "2026-09-01",
+      "service": "Amazon EC2",
+      "amount": 12.50
+    },
+    {
+      "date": "2026-09-01",
+      "service": "Amazon S3",
+      "amount": 2.30
+    },
+    {
+      "date": "2026-09-01",
+      "service": "AWS Lambda",
+      "amount": 0.80
+    },
+    {
+      "date": "2026-09-02",
+      "service": "Amazon EC2",
+      "amount": 13.10
+    },
+    {
+      "date": "2026-09-02",
+      "service": "Amazon S3",
+      "amount": 2.45
+    },
+    {
+      "date": "2026-09-02",
+      "service": "AWS Lambda",
+      "amount": 0.92
+    },
+    {
+      "date": "2026-09-03",
+      "service": "Amazon EC2",
+      "amount": 11.85
+    },
+    {
+      "date": "2026-09-03",
+      "service": "Amazon S3",
+      "amount": 2.51
+    },
+    {
+      "date": "2026-09-03",
+      "service": "AWS Lambda",
+      "amount": 0.76
+    }
+  ]
+}
