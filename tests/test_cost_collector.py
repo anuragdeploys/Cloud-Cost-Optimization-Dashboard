@@ -1,3 +1,4 @@
+from app.aws_cost_collector import normalize_cost_response
 from app.cost_collector import (
     calculate_cost_by_date,
     calculate_cost_by_service,
@@ -92,3 +93,85 @@ def test_negative_amount():
         assert False, "Expected ValueError"
     except ValueError as error:
         assert "amount cannot be negative" in str(error)
+
+
+def test_normalize_cost_response():
+    fake_aws_response = {
+        "ResultsByTime": [
+            {
+                "TimePeriod": {
+                    "Start": "2026-09-01",
+                    "End": "2026-09-02",
+                },
+                "Groups": [],
+                "Estimated": True,
+            }
+        ]
+    }
+
+    records = normalize_cost_response(fake_aws_response)
+
+    assert records == []
+
+
+def test_normalize_service_cost_response():
+    fake_aws_response = {
+        "ResultsByTime": [
+            {
+                "TimePeriod": {
+                    "Start": "2026-09-01",
+                    "End": "2026-09-02",
+                },
+                "Groups": [
+                    {
+                        "Keys": ["Amazon EC2"],
+                        "Metrics": {
+                            "UnblendedCost": {
+                                "Amount": "12.50",
+                                "Unit": "USD",
+                            }
+                        }
+                    },
+                    {
+                        "Keys": ["Amazon S3"],
+                        "Metrics": {
+                            "UnblendedCost": {
+                                "Amount": "2.30",
+                                "Unit": "USD",
+                            }
+                        }
+                    },
+                    {
+                        "Keys": ["AWS Lambda"],
+                        "Metrics": {
+                            "UnblendedCost": {
+                                "Amount": "0.80",
+                                "Unit": "USD",
+                            }
+                        }
+                    }
+                ],
+                "Estimated": True,
+            }
+        ]
+    }
+
+    records = normalize_cost_response(fake_aws_response)
+
+    assert records == [
+        {
+            "date": "2026-09-01",
+            "service": "Amazon EC2",
+            "amount": 12.50,
+        },
+        {
+            "date": "2026-09-01",
+            "service": "Amazon S3",
+            "amount": 2.30,
+        },
+        {
+            "date": "2026-09-01",
+            "service": "AWS Lambda",
+            "amount": 0.80,
+        },
+    ]
