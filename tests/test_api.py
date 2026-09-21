@@ -1,6 +1,5 @@
 import pytest
 
-
 from app.api import create_app
 from app.database import initialize_database, insert_cost_records
 
@@ -161,6 +160,40 @@ def test_costs_endpoint_requires_both_dates(tmp_path):
     }
 
 
+def test_costs_endpoint_rejects_invalid_date_format(tmp_path):
+    database_file = tmp_path / "test_costs.db"
+
+    app = create_app(database_file)
+    client = app.test_client()
+
+    response = client.get(
+        "/costs?start_date=2026-99-99&end_date=2026-09-10"
+    )
+
+    assert response.status_code == 400
+
+    assert response.get_json() == {
+        "error": "Dates must use YYYY-MM-DD format."
+    }
+
+
+def test_costs_endpoint_rejects_invalid_date_order(tmp_path):
+    database_file = tmp_path / "test_costs.db"
+
+    app = create_app(database_file)
+    client = app.test_client()
+
+    response = client.get(
+        "/costs?start_date=2026-09-10&end_date=2026-09-05"
+    )
+
+    assert response.status_code == 400
+
+    assert response.get_json() == {
+        "error": "End date must be later than start date."
+    }
+
+
 def test_cost_summary_endpoint(tmp_path):
     database_file = tmp_path / "test_costs.db"
 
@@ -205,4 +238,62 @@ def test_cost_summary_endpoint(tmp_path):
         "Amazon EC2": 12.50,
         "Amazon S3": 2.30,
         "AWS Lambda": 0.80,
+    }
+
+
+def test_cost_summary_requires_both_dates(tmp_path):
+    database_file = tmp_path / "test_costs.db"
+
+    app = create_app(database_file)
+    client = app.test_client()
+
+    response = client.get(
+        "/costs/summary?start_date=2026-09-01"
+    )
+
+    assert response.status_code == 400
+
+    assert response.get_json() == {
+        "error": (
+            "start_date and end_date "
+            "must be provided together."
+        )
+    }
+
+
+def test_cost_summary_rejects_invalid_date_format(tmp_path):
+    database_file = tmp_path / "test_costs.db"
+
+    app = create_app(database_file)
+    client = app.test_client()
+
+    response = client.get(
+        "/costs/summary?"
+        "start_date=2026-99-99&"
+        "end_date=2026-09-10"
+    )
+
+    assert response.status_code == 400
+
+    assert response.get_json() == {
+        "error": "Dates must use YYYY-MM-DD format."
+    }
+
+
+def test_cost_summary_rejects_invalid_date_order(tmp_path):
+    database_file = tmp_path / "test_costs.db"
+
+    app = create_app(database_file)
+    client = app.test_client()
+
+    response = client.get(
+        "/costs/summary?"
+        "start_date=2026-09-10&"
+        "end_date=2026-09-05"
+    )
+
+    assert response.status_code == 400
+
+    assert response.get_json() == {
+        "error": "End date must be later than start date."
     }

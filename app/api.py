@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, request
 
+from app.aws_cost_collector import validate_date_range
 from app.cost_service import (
     get_cost_summary,
     get_stored_cost_records,
@@ -23,6 +24,29 @@ def create_app(database_file=None):
 
     app = Flask(__name__)
 
+    def validate_request_dates(start_date, end_date):
+        """
+        Validate optional API date parameters.
+
+        Both dates must be supplied together and must form
+        a valid date range.
+        """
+        if (start_date is None) != (end_date is None):
+            return (
+                "start_date and end_date must be provided together."
+            )
+
+        if start_date is not None and end_date is not None:
+            try:
+                validate_date_range(
+                    start_date,
+                    end_date,
+                )
+            except ValueError as error:
+                return str(error)
+
+        return None
+
     @app.get("/health")
     def health():
         return jsonify(
@@ -37,13 +61,15 @@ def create_app(database_file=None):
         start_date = request.args.get("start_date")
         end_date = request.args.get("end_date")
 
-        if (start_date is None) != (end_date is None):
+        date_error = validate_request_dates(
+            start_date,
+            end_date,
+        )
+
+        if date_error:
             return jsonify(
                 {
-                    "error": (
-                        "start_date and end_date "
-                        "must be provided together."
-                    )
+                    "error": date_error,
                 }
             ), 400
 
@@ -67,30 +93,24 @@ def create_app(database_file=None):
         start_date = request.args.get("start_date")
         end_date = request.args.get("end_date")
 
-        if (start_date is None) != (end_date is None):
+        date_error = validate_request_dates(
+            start_date,
+            end_date,
+        )
+
+        if date_error:
             return jsonify(
                 {
-                    "error": (
-                        "start_date and end_date "
-                        "must be provided together."
-                    )
+                    "error": date_error,
                 }
             ), 400
 
-        try:
-            result = get_cost_summary(
-                service=service,
-                start_date=start_date,
-                end_date=end_date,
-                database_file=effective_database_file,
-            )
-
-        except ValueError as error:
-            return jsonify(
-                {
-                    "error": str(error),
-                }
-            ), 400
+        result = get_cost_summary(
+            service=service,
+            start_date=start_date,
+            end_date=end_date,
+            database_file=effective_database_file,
+        )
 
         return jsonify(result)
 
