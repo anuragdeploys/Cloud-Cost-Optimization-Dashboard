@@ -7,8 +7,7 @@ DATABASE_FILE = Path(__file__).parent.parent / "database" / "costs.db"
 
 def get_connection(database_file=DATABASE_FILE):
     """Create and return a connection to the SQLite database."""
-    connection = sqlite3.connect(database_file)
-    return connection
+    return sqlite3.connect(database_file)
 
 
 def initialize_database(database_file=DATABASE_FILE):
@@ -59,6 +58,65 @@ def insert_cost_record(
         )
 
         connection.commit()
+
+    finally:
+        connection.close()
+
+
+def get_cost_records(
+    service=None,
+    start_date=None,
+    end_date=None,
+    database_file=DATABASE_FILE,
+):
+    """
+    Retrieve cost records with optional filters.
+
+    end_date is exclusive, matching the AWS Cost Explorer convention.
+    """
+    connection = get_connection(database_file)
+
+    try:
+        query = """
+            SELECT id, date, service, amount, currency
+            FROM cost_records
+        """
+
+        conditions = []
+        parameters = []
+
+        if service is not None:
+            conditions.append("service = ?")
+            parameters.append(service)
+
+        if start_date is not None:
+            conditions.append("date >= ?")
+            parameters.append(start_date)
+
+        if end_date is not None:
+            conditions.append("date < ?")
+            parameters.append(end_date)
+
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+
+        query += " ORDER BY date ASC, id ASC"
+
+        rows = connection.execute(
+            query,
+            parameters,
+        ).fetchall()
+
+        return [
+            {
+                "id": row[0],
+                "date": row[1],
+                "service": row[2],
+                "amount": row[3],
+                "currency": row[4],
+            }
+            for row in rows
+        ]
 
     finally:
         connection.close()
