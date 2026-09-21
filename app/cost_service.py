@@ -56,12 +56,19 @@ def collect_and_save_aws_costs(
     )
 
 
-def get_stored_cost_records(database_file=None):
-    """Return stored cost records from the database."""
-    if database_file is None:
-        return get_cost_records()
-
+def get_stored_cost_records(
+    service=None,
+    start_date=None,
+    end_date=None,
+    database_file=None,
+):
+    """
+    Return stored cost records using database-level filtering.
+    """
     return get_cost_records(
+        service=service,
+        start_date=start_date,
+        end_date=end_date,
         database_file=database_file,
     )
 
@@ -74,31 +81,16 @@ def get_cost_summary(
 ):
     """
     Calculate a summary from stored cost records.
+
+    Filtering is performed by the database before records
+    are passed to the processing layer.
     """
     records = get_stored_cost_records(
+        service=service,
+        start_date=start_date,
+        end_date=end_date,
         database_file=database_file,
     )
-
-    if service is not None:
-        records = [
-            record
-            for record in records
-            if record["service"] == service
-        ]
-
-    if start_date is not None:
-        records = [
-            record
-            for record in records
-            if record["date"] >= start_date
-        ]
-
-    if end_date is not None:
-        records = [
-            record
-            for record in records
-            if record["date"] < end_date
-        ]
 
     return process_cost_records(
         [

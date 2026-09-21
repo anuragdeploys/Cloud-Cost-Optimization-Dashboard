@@ -394,3 +394,34 @@ def test_get_cost_summary_by_date_range(tmp_path):
         "2026-09-01": 12.50,
         "2026-09-02": 2.30,
     }
+   
+def test_get_stored_cost_records_passes_filters_to_database():
+    expected_records = [
+        {
+            "id": 1,
+            "date": "2026-09-02",
+            "service": "Amazon EC2",
+            "amount": 13.10,
+            "currency": "USD",
+        }
+    ]
+
+    with patch(
+        "app.cost_service.get_cost_records",
+        return_value=expected_records,
+    ) as mock_get_cost_records:
+        result = get_stored_cost_records(
+            service="Amazon EC2",
+            start_date="2026-09-02",
+            end_date="2026-09-03",
+            database_file="test.db",
+        )
+
+    assert result == expected_records
+
+    mock_get_cost_records.assert_called_once_with(
+        service="Amazon EC2",
+        start_date="2026-09-02",
+        end_date="2026-09-03",
+        database_file="test.db",
+    )    
