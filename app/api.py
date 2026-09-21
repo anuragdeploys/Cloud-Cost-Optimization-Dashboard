@@ -4,18 +4,24 @@ from app.cost_service import (
     get_cost_summary,
     get_stored_cost_records,
 )
-from app.database import initialize_database
+from app.database import DATABASE_FILE, initialize_database
 
 
 def create_app(database_file=None):
     """
     Create and configure the Flask application.
     """
-    app = Flask(__name__)
+    effective_database_file = (
+        DATABASE_FILE
+        if database_file is None
+        else database_file
+    )
 
     initialize_database(
-        database_file=database_file
+        database_file=effective_database_file
     )
+
+    app = Flask(__name__)
 
     @app.get("/health")
     def health():
@@ -45,7 +51,7 @@ def create_app(database_file=None):
             service=service,
             start_date=start_date,
             end_date=end_date,
-            database_file=database_file,
+            database_file=effective_database_file,
         )
 
         return jsonify(
@@ -76,7 +82,7 @@ def create_app(database_file=None):
                 service=service,
                 start_date=start_date,
                 end_date=end_date,
-                database_file=database_file,
+                database_file=effective_database_file,
             )
 
         except ValueError as error:
@@ -93,6 +99,7 @@ def create_app(database_file=None):
 
 if __name__ == "__main__":
     app = create_app()
+
     app.run(
         host="0.0.0.0",
         port=5000,
