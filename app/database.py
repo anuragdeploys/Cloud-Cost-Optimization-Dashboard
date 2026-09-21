@@ -62,6 +62,17 @@ def insert_cost_record(
     finally:
         connection.close()
 
+def insert_cost_records(records, currency="USD", database_file=DATABASE_FILE):
+    """Insert multiple normalized cost records into the database."""
+    for record in records:
+        insert_cost_record(
+            date=record["date"],
+            service=record["service"],
+            amount=record["amount"],
+            currency=currency,
+            database_file=database_file,
+        )
+
 
 def get_cost_records(
     service=None,

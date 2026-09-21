@@ -4,6 +4,7 @@ from app.database import (
     get_cost_records,
     initialize_database,
     insert_cost_record,
+    insert_cost_records,
 )
 
 
@@ -265,3 +266,48 @@ def test_get_cost_records_with_combined_filters(tmp_path):
     assert records[0]["date"] == "2026-09-02"
     assert records[0]["service"] == "Amazon EC2"
     assert records[0]["amount"] == 13.10
+
+def test_insert_normalized_cost_records(tmp_path):
+    database_file = tmp_path / "test_costs.db"
+
+    initialize_database(database_file)
+
+    records = [
+        {
+            "date": "2026-09-01",
+            "service": "Amazon EC2",
+            "amount": 12.50,
+        },
+        {
+            "date": "2026-09-01",
+            "service": "Amazon S3",
+            "amount": 2.30,
+        },
+        {
+            "date": "2026-09-01",
+            "service": "AWS Lambda",
+            "amount": 0.80,
+        },
+    ]
+
+    insert_cost_records(
+        records=records,
+        currency="USD",
+        database_file=database_file,
+    )
+
+    stored_records = get_cost_records(
+        database_file=database_file,
+    )
+
+    assert len(stored_records) == 3
+
+    assert stored_records[0]["service"] == "Amazon EC2"
+    assert stored_records[0]["amount"] == 12.50
+    assert stored_records[0]["currency"] == "USD"
+
+    assert stored_records[1]["service"] == "Amazon S3"
+    assert stored_records[1]["amount"] == 2.30
+
+    assert stored_records[2]["service"] == "AWS Lambda"
+    assert stored_records[2]["amount"] == 0.80    
