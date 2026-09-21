@@ -4,15 +4,19 @@ from datetime import datetime
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError, NoCredentialsError
 
-
-AWS_PROFILE = "cost-dashboard"
-AWS_REGION = "us-east-1"
+from app.config import get_aws_profile, get_aws_region
 
 
 def get_cost_explorer_client():
-    """Create an AWS Cost Explorer client using the project IAM profile."""
-    session = boto3.Session(profile_name=AWS_PROFILE)
-    return session.client("ce", region_name=AWS_REGION)
+    """Create an AWS Cost Explorer client using application configuration."""
+    session = boto3.Session(
+        profile_name=get_aws_profile()
+    )
+
+    return session.client(
+        "ce",
+        region_name=get_aws_region(),
+    )
 
 
 def get_daily_costs(start_date, end_date):
