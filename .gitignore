@@ -7,3 +7,4 @@ __pycache__/
 *.log
 awscliv2.zip
 vene/
+database/costs.db
