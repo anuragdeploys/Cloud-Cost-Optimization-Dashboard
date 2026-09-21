@@ -2,6 +2,7 @@ import argparse
 from datetime import datetime
 
 import boto3
+from botocore.exceptions import BotoCoreError, ClientError, NoCredentialsError
 
 
 AWS_PROFILE = "cost-dashboard"
@@ -133,32 +134,66 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def main():
-    args = parse_arguments()
+def format_aws_error(error):
+    """
+    Convert AWS/Boto3 exceptions into user-friendly messages.
+    """
+    if isinstance(error, NoCredentialsError):
+        return "AWS credentials could not be found."
 
-    validate_date_range(
-        args.start_date,
-        args.end_date,
-    )
-
-    response = get_daily_costs(
-        args.start_date,
-        args.end_date,
-    )
-
-    records = normalize_cost_response(response)
-
-    print("AWS Cost Explorer request successful!")
-    print(f"Period: {args.start_date} to {args.end_date}")
-    print()
-
-    for record in records:
-        print(
-            f"{record['date']} | "
-            f"{record['service']} | "
-            f"{record['amount']:.2f} USD"
+    if isinstance(error, ClientError):
+        error_details = error.response.get("Error", {})
+        error_code = error_details.get("Code", "Unknown")
+        error_message = error_details.get(
+            "Message",
+            "The AWS API request failed.",
         )
+
+        return f"AWS API error ({error_code}): {error_message}"
+
+    if isinstance(error, BotoCoreError):
+        return f"AWS connection error: {error}"
+
+    return f"AWS request failed: {error}"
+
+
+def main():
+    try:
+        args = parse_arguments()
+
+        validate_date_range(
+            args.start_date,
+            args.end_date,
+        )
+
+        response = get_daily_costs(
+            args.start_date,
+            args.end_date,
+        )
+
+        records = normalize_cost_response(response)
+
+        print("AWS Cost Explorer request successful!")
+        print(f"Period: {args.start_date} to {args.end_date}")
+        print()
+
+        for record in records:
+            print(
+                f"{record['date']} | "
+                f"{record['service']} | "
+                f"{record['amount']:.2f} USD"
+            )
+
+        return 0
+
+    except ValueError as error:
+        print(f"Input error: {error}")
+        return 1
+
+    except (NoCredentialsError, ClientError, BotoCoreError) as error:
+        print(f"Error: {format_aws_error(error)}")
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

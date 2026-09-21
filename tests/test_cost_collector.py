@@ -1,7 +1,10 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
+from botocore.exceptions import BotoCoreError, ClientError, NoCredentialsError
+
 from app.aws_cost_collector import (
+    format_aws_error,
     get_daily_costs,
     normalize_cost_response,
     parse_arguments,
@@ -371,3 +374,57 @@ def test_get_daily_costs_multiple_pages():
 
     assert "NextPageToken" not in first_call.kwargs
     assert second_call.kwargs["NextPageToken"] == "page-two-token"
+
+
+def test_format_no_credentials_error():
+    error = NoCredentialsError()
+
+    message = format_aws_error(error)
+
+    assert message == "AWS credentials could not be found."
+
+
+def test_format_client_error():
+    error = ClientError(
+        {
+            "Error": {
+                "Code": "AccessDeniedException",
+                "Message": "User is not authorized.",
+            }
+        },
+        "GetCostAndUsage",
+    )
+
+    message = format_aws_error(error)
+
+    assert (
+        message
+        == "AWS API error (AccessDeniedException): "
+        "User is not authorized."
+    )
+
+
+def test_format_botocore_error():
+    error = BotoCoreError()
+
+    message = format_aws_error(error)
+
+    assert message.startswith("AWS connection error:")
+
+
+def test_main_returns_one_for_invalid_dates(monkeypatch):
+    monkeypatch.setattr(
+        "app.aws_cost_collector.parse_arguments",
+        lambda: MagicMock(
+            start_date="2026-09-10",
+            end_date="2026-09-05",
+        ),
+    )
+
+    with patch("app.aws_cost_collector.get_daily_costs") as mock_get_costs:
+        from app.aws_cost_collector import main
+
+        result = main()
+
+    assert result == 1
+    mock_get_costs.assert_not_called()
