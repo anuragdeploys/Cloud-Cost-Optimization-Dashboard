@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, render_template, request
 
 from app.aws_cost_collector import validate_date_range
 from app.cost_service import (
@@ -27,13 +27,11 @@ def create_app(database_file=None):
     def validate_request_dates(start_date, end_date):
         """
         Validate optional API date parameters.
-
-        Both dates must be supplied together and must form
-        a valid date range.
         """
         if (start_date is None) != (end_date is None):
             return (
-                "start_date and end_date must be provided together."
+                "start_date and end_date "
+                "must be provided together."
             )
 
         if start_date is not None and end_date is not None:
@@ -46,6 +44,10 @@ def create_app(database_file=None):
                 return str(error)
 
         return None
+
+    @app.get("/")
+    def dashboard():
+        return render_template("index.html")
 
     @app.get("/health")
     def health():

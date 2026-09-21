@@ -18,6 +18,34 @@ def test_health_endpoint(tmp_path):
     }
 
 
+def test_dashboard_endpoint(tmp_path):
+    database_file = tmp_path / "test_costs.db"
+
+    app = create_app(database_file)
+    client = app.test_client()
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert "Cloud Cost Optimization Dashboard" in response.get_data(
+        as_text=True
+    )
+
+
+def test_dashboard_static_javascript(tmp_path):
+    database_file = tmp_path / "test_costs.db"
+
+    app = create_app(database_file)
+    client = app.test_client()
+
+    response = client.get("/static/app.js")
+
+    assert response.status_code == 200
+    assert "loadDashboard" in response.get_data(
+        as_text=True
+    )
+
+
 def test_costs_endpoint_returns_records(tmp_path):
     database_file = tmp_path / "test_costs.db"
 
@@ -86,7 +114,9 @@ def test_costs_endpoint_filters_by_service(tmp_path):
     app = create_app(database_file)
     client = app.test_client()
 
-    response = client.get("/costs?service=Amazon%20EC2")
+    response = client.get(
+        "/costs?service=Amazon%20EC2"
+    )
 
     assert response.status_code == 200
 
@@ -148,7 +178,9 @@ def test_costs_endpoint_requires_both_dates(tmp_path):
     app = create_app(database_file)
     client = app.test_client()
 
-    response = client.get("/costs?start_date=2026-09-01")
+    response = client.get(
+        "/costs?start_date=2026-09-01"
+    )
 
     assert response.status_code == 400
 

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Cloud Cost Optimization Dashboard</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+</head>
+
+<body>
+    <header class="topbar">
+        <div>
+            <h1>Cloud Cost Optimization Dashboard</h1>
+            <p>AWS cost visibility and analysis</p>
+        </div>
+
+        <div id="status" class="status">
+            Loading...
+        </div>
+    </header>
+
+    <main class="container">
+
+        <section class="summary-grid">
+
+            <div class="card">
+                <h2>Total Cost</h2>
+                <p id="total-cost">--</p>
+            </div>
+
+            <div class="card">
+                <h2>Records</h2>
+                <p id="record-count">--</p>
+            </div>
+
+            <div class="card">
+                <h2>Services</h2>
+                <p id="service-count">--</p>
+            </div>
+
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Cost by Service</h2>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Service</th>
+                        <th>Cost</th>
+                    </tr>
+                </thead>
+
+                <tbody id="service-table-body">
+                    <tr>
+                        <td colspan="2">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Recent Cost Records</h2>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Service</th>
+                        <th>Amount</th>
+                        <th>Currency</th>
+                    </tr>
+                </thead>
+
+                <tbody id="records-table-body">
+                    <tr>
+                        <td colspan="4">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+    </main>
+
+    <script
+        src="{{ url_for('static', filename='app.js') }}"
+    ></script>
+</body>
+</html>
