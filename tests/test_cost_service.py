@@ -3,6 +3,8 @@ from unittest.mock import patch
 
 from app.cost_service import (
     collect_and_save_aws_costs,
+    get_cost_summary,
+    get_stored_cost_records,
     save_cost_records,
 )
 from app.database import get_cost_records, initialize_database
@@ -221,3 +223,174 @@ def test_collect_and_save_aws_costs_rejects_invalid_date_range(tmp_path):
     )
 
     assert stored_records == []
+
+
+def test_get_stored_cost_records(tmp_path):
+    database_file = tmp_path / "test_costs.db"
+
+    initialize_database(database_file)
+
+    records = [
+        {
+            "date": "2026-09-01",
+            "service": "Amazon EC2",
+            "amount": 12.50,
+        },
+        {
+            "date": "2026-09-02",
+            "service": "Amazon S3",
+            "amount": 2.30,
+        },
+    ]
+
+    save_cost_records(
+        records=records,
+        currency="USD",
+        database_file=database_file,
+    )
+
+    result = get_stored_cost_records(
+        database_file=database_file,
+    )
+
+    assert len(result) == 2
+    assert result[0]["service"] == "Amazon EC2"
+    assert result[1]["service"] == "Amazon S3"
+
+
+def test_get_cost_summary_all_records(tmp_path):
+    database_file = tmp_path / "test_costs.db"
+
+    initialize_database(database_file)
+
+    records = [
+        {
+            "date": "2026-09-01",
+            "service": "Amazon EC2",
+            "amount": 12.50,
+        },
+        {
+            "date": "2026-09-01",
+            "service": "Amazon S3",
+            "amount": 2.30,
+        },
+        {
+            "date": "2026-09-02",
+            "service": "AWS Lambda",
+            "amount": 0.80,
+        },
+    ]
+
+    save_cost_records(
+        records=records,
+        currency="USD",
+        database_file=database_file,
+    )
+
+    result = get_cost_summary(
+        database_file=database_file,
+    )
+
+    assert result["record_count"] == 3
+    assert result["total"] == pytest.approx(15.60)
+
+    assert result["cost_by_service"] == {
+        "Amazon EC2": 12.50,
+        "Amazon S3": 2.30,
+        "AWS Lambda": 0.80,
+    }
+
+    assert result["cost_by_date"] == {
+        "2026-09-01": pytest.approx(14.80),
+        "2026-09-02": pytest.approx(0.80),
+    }
+
+
+def test_get_cost_summary_by_service(tmp_path):
+    database_file = tmp_path / "test_costs.db"
+
+    initialize_database(database_file)
+
+    records = [
+        {
+            "date": "2026-09-01",
+            "service": "Amazon EC2",
+            "amount": 12.50,
+        },
+        {
+            "date": "2026-09-02",
+            "service": "Amazon EC2",
+            "amount": 13.10,
+        },
+        {
+            "date": "2026-09-01",
+            "service": "Amazon S3",
+            "amount": 2.30,
+        },
+    ]
+
+    save_cost_records(
+        records=records,
+        currency="USD",
+        database_file=database_file,
+    )
+
+    result = get_cost_summary(
+        service="Amazon EC2",
+        database_file=database_file,
+    )
+
+    assert result["record_count"] == 2
+    assert result["total"] == pytest.approx(25.60)
+    assert result["cost_by_service"] == {
+        "Amazon EC2": 25.60,
+    }
+
+
+def test_get_cost_summary_by_date_range(tmp_path):
+    database_file = tmp_path / "test_costs.db"
+
+    initialize_database(database_file)
+
+    records = [
+        {
+            "date": "2026-09-01",
+            "service": "Amazon EC2",
+            "amount": 12.50,
+        },
+        {
+            "date": "2026-09-02",
+            "service": "Amazon S3",
+            "amount": 2.30,
+        },
+        {
+            "date": "2026-09-03",
+            "service": "AWS Lambda",
+            "amount": 0.80,
+        },
+    ]
+
+    save_cost_records(
+        records=records,
+        currency="USD",
+        database_file=database_file,
+    )
+
+    result = get_cost_summary(
+        start_date="2026-09-01",
+        end_date="2026-09-03",
+        database_file=database_file,
+    )
+
+    assert result["record_count"] == 2
+    assert result["total"] == pytest.approx(14.80)
+
+    assert result["cost_by_service"] == {
+        "Amazon EC2": 12.50,
+        "Amazon S3": 2.30,
+    }
+
+    assert result["cost_by_date"] == {
+        "2026-09-01": 12.50,
+        "2026-09-02": 2.30,
+    }
