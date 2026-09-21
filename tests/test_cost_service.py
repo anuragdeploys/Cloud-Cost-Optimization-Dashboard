@@ -1,6 +1,10 @@
 import pytest
+from unittest.mock import patch
 
-from app.cost_service import save_cost_records
+from app.cost_service import (
+    collect_and_save_aws_costs,
+    save_cost_records,
+)
 from app.database import get_cost_records, initialize_database
 
 
@@ -101,6 +105,116 @@ def test_save_cost_records_rejects_invalid_records(tmp_path):
             currency="USD",
             database_file=database_file,
         )
+
+    stored_records = get_cost_records(
+        database_file=database_file,
+    )
+
+    assert stored_records == []
+
+
+def test_collect_and_save_aws_costs(tmp_path):
+    database_file = tmp_path / "test_costs.db"
+
+    initialize_database(database_file)
+
+    fake_aws_response = {
+        "ResultsByTime": [
+            {
+                "TimePeriod": {
+                    "Start": "2026-09-01",
+                    "End": "2026-09-02",
+                },
+                "Groups": [
+                    {
+                        "Keys": ["Amazon EC2"],
+                        "Metrics": {
+                            "UnblendedCost": {
+                                "Amount": "12.50",
+                                "Unit": "USD",
+                            }
+                        },
+                    },
+                    {
+                        "Keys": ["Amazon S3"],
+                        "Metrics": {
+                            "UnblendedCost": {
+                                "Amount": "2.30",
+                                "Unit": "USD",
+                            }
+                        },
+                    },
+                    {
+                        "Keys": ["AWS Lambda"],
+                        "Metrics": {
+                            "UnblendedCost": {
+                                "Amount": "0.80",
+                                "Unit": "USD",
+                            }
+                        },
+                    },
+                ],
+                "Estimated": True,
+            }
+        ]
+    }
+
+    with patch(
+        "app.cost_service.get_daily_costs",
+        return_value=fake_aws_response,
+    ) as mock_get_daily_costs:
+        result = collect_and_save_aws_costs(
+            start_date="2026-09-01",
+            end_date="2026-09-02",
+            currency="USD",
+            database_file=database_file,
+        )
+
+    mock_get_daily_costs.assert_called_once_with(
+        "2026-09-01",
+        "2026-09-02",
+    )
+
+    assert result["currency"] == "USD"
+    assert result["record_count"] == 3
+    assert result["total"] == pytest.approx(15.60)
+
+    stored_records = get_cost_records(
+        database_file=database_file,
+    )
+
+    assert len(stored_records) == 3
+
+    assert stored_records[0]["service"] == "Amazon EC2"
+    assert stored_records[0]["amount"] == 12.50
+
+    assert stored_records[1]["service"] == "Amazon S3"
+    assert stored_records[1]["amount"] == 2.30
+
+    assert stored_records[2]["service"] == "AWS Lambda"
+    assert stored_records[2]["amount"] == 0.80
+
+
+def test_collect_and_save_aws_costs_rejects_invalid_date_range(tmp_path):
+    database_file = tmp_path / "test_costs.db"
+
+    initialize_database(database_file)
+
+    with patch(
+        "app.cost_service.get_daily_costs"
+    ) as mock_get_daily_costs:
+        with pytest.raises(
+            ValueError,
+            match="End date must be later than start date",
+        ):
+            collect_and_save_aws_costs(
+                start_date="2026-09-10",
+                end_date="2026-09-05",
+                currency="USD",
+                database_file=database_file,
+            )
+
+    mock_get_daily_costs.assert_not_called()
 
     stored_records = get_cost_records(
         database_file=database_file,
