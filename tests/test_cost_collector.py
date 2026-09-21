@@ -1,6 +1,10 @@
 import pytest
 
-from app.aws_cost_collector import normalize_cost_response
+from app.aws_cost_collector import (
+    normalize_cost_response,
+    parse_arguments,
+    validate_date_range,
+)
 from app.cost_collector import (
     calculate_cost_by_date,
     calculate_cost_by_service,
@@ -238,6 +242,48 @@ def test_aws_records_can_use_processing_layer():
     records = normalize_cost_response(fake_aws_response)
     result = process_cost_records(records, "USD")
 
-    assert result["total"] == 14.80
+    assert result["total"] == pytest.approx(14.80)
     assert result["cost_by_service"]["Amazon EC2"] == 12.50
     assert result["cost_by_service"]["Amazon S3"] == 2.30
+
+
+def test_parse_arguments(monkeypatch):
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "aws_cost_collector.py",
+            "--start-date",
+            "2026-09-01",
+            "--end-date",
+            "2026-09-04",
+        ],
+    )
+
+    args = parse_arguments()
+
+    assert args.start_date == "2026-09-01"
+    assert args.end_date == "2026-09-04"
+
+def test_validate_valid_date_range():
+    validate_date_range("2026-09-01", "2026-09-04")
+
+
+def test_validate_invalid_date_format():
+    with pytest.raises(ValueError, match="YYYY-MM-DD"):
+        validate_date_range("2026-99-01", "2026-09-04")
+
+
+def test_validate_end_date_before_start_date():
+    with pytest.raises(
+        ValueError,
+        match="End date must be later than start date",
+    ):
+        validate_date_range("2026-09-10", "2026-09-05")
+
+
+def test_validate_same_start_and_end_date():
+    with pytest.raises(
+        ValueError,
+        match="End date must be later than start date",
+    ):
+        validate_date_range("2026-09-01", "2026-09-01")
