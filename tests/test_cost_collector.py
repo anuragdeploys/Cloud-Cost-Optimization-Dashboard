@@ -1,8 +1,11 @@
+import pytest
+
 from app.aws_cost_collector import normalize_cost_response
 from app.cost_collector import (
     calculate_cost_by_date,
     calculate_cost_by_service,
     calculate_total,
+    process_cost_records,
     validate_cost_data,
 )
 
@@ -130,7 +133,7 @@ def test_normalize_service_cost_response():
                                 "Amount": "12.50",
                                 "Unit": "USD",
                             }
-                        }
+                        },
                     },
                     {
                         "Keys": ["Amazon S3"],
@@ -139,7 +142,7 @@ def test_normalize_service_cost_response():
                                 "Amount": "2.30",
                                 "Unit": "USD",
                             }
-                        }
+                        },
                     },
                     {
                         "Keys": ["AWS Lambda"],
@@ -148,8 +151,8 @@ def test_normalize_service_cost_response():
                                 "Amount": "0.80",
                                 "Unit": "USD",
                             }
-                        }
-                    }
+                        },
+                    },
                 ],
                 "Estimated": True,
             }
@@ -175,3 +178,66 @@ def test_normalize_service_cost_response():
             "amount": 0.80,
         },
     ]
+
+
+def test_process_cost_records():
+    records = [
+        {"date": "2026-09-01", "service": "Amazon EC2", "amount": 12.50},
+        {"date": "2026-09-01", "service": "Amazon S3", "amount": 2.30},
+        {"date": "2026-09-01", "service": "AWS Lambda", "amount": 0.80},
+    ]
+
+    result = process_cost_records(records, "USD")
+
+    assert result["currency"] == "USD"
+    assert result["record_count"] == 3
+    assert result["total"] == pytest.approx(15.60)
+
+    assert result["cost_by_service"] == {
+        "Amazon EC2": 12.50,
+        "Amazon S3": 2.30,
+        "AWS Lambda": 0.80,
+    }
+
+    assert result["cost_by_date"]["2026-09-01"] == pytest.approx(15.60)
+
+
+def test_aws_records_can_use_processing_layer():
+    fake_aws_response = {
+        "ResultsByTime": [
+            {
+                "TimePeriod": {
+                    "Start": "2026-09-01",
+                    "End": "2026-09-02",
+                },
+                "Groups": [
+                    {
+                        "Keys": ["Amazon EC2"],
+                        "Metrics": {
+                            "UnblendedCost": {
+                                "Amount": "12.50",
+                                "Unit": "USD",
+                            }
+                        },
+                    },
+                    {
+                        "Keys": ["Amazon S3"],
+                        "Metrics": {
+                            "UnblendedCost": {
+                                "Amount": "2.30",
+                                "Unit": "USD",
+                            }
+                        },
+                    },
+                ],
+                "Estimated": True,
+            }
+        ]
+    }
+
+    records = normalize_cost_response(fake_aws_response)
+    result = process_cost_records(records, "USD")
+
+    assert result["total"] == 14.80
+    assert result["cost_by_service"]["Amazon EC2"] == 12.50
+    assert result["cost_by_service"]["Amazon S3"] == 2.30

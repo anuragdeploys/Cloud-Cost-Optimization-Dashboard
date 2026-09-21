@@ -27,9 +27,7 @@ def validate_cost_data(data):
 
     for index, record in enumerate(data["records"]):
         if not isinstance(record, dict):
-            raise ValueError(
-                f"Record {index} must be a JSON object."
-            )
+            raise ValueError(f"Record {index} must be a JSON object.")
 
         required_fields = ["date", "service", "amount"]
 
@@ -40,24 +38,16 @@ def validate_cost_data(data):
                 )
 
         if not isinstance(record["date"], str):
-            raise ValueError(
-                f"Record {index} date must be a string."
-            )
+            raise ValueError(f"Record {index} date must be a string.")
 
         if not isinstance(record["service"], str):
-            raise ValueError(
-                f"Record {index} service must be a string."
-            )
+            raise ValueError(f"Record {index} service must be a string.")
 
         if not isinstance(record["amount"], (int, float)):
-            raise ValueError(
-                f"Record {index} amount must be numeric."
-            )
+            raise ValueError(f"Record {index} amount must be numeric.")
 
         if record["amount"] < 0:
-            raise ValueError(
-                f"Record {index} amount cannot be negative."
-            )
+            raise ValueError(f"Record {index} amount cannot be negative.")
 
 
 def calculate_total(records):
@@ -91,6 +81,28 @@ def calculate_cost_by_date(records):
     return daily_costs
 
 
+def process_cost_records(records, currency="USD"):
+    """
+    Validate and calculate cost information from normalized records.
+
+    This function is independent of the data source.
+    """
+    data = {
+        "currency": currency,
+        "records": records,
+    }
+
+    validate_cost_data(data)
+
+    return {
+        "currency": currency,
+        "record_count": len(records),
+        "total": calculate_total(records),
+        "cost_by_service": calculate_cost_by_service(records),
+        "cost_by_date": calculate_cost_by_date(records),
+    }
+
+
 def main():
     try:
         data = load_cost_data()
@@ -99,29 +111,26 @@ def main():
         currency = data["currency"]
         records = data["records"]
 
-        total = calculate_total(records)
-        service_costs = calculate_cost_by_service(records)
-        daily_costs = calculate_cost_by_date(records)
+        result = process_cost_records(records, currency)
 
         print("Cost data loaded successfully!")
-        print(f"Records: {len(records)}")
-        print(f"Currency: {currency}")
+        print(f"Records: {result['record_count']}")
+        print(f"Currency: {result['currency']}")
         print()
 
         print("Cost by service:")
-
-        for service, amount in service_costs.items():
+        for service, amount in result["cost_by_service"].items():
             print(f"{service}: {amount:.2f} {currency}")
 
         print()
 
         print("Cost by date:")
-
-        for date, amount in daily_costs.items():
+        for date, amount in result["cost_by_date"].items():
             print(f"{date}: {amount:.2f} {currency}")
 
         print()
-        print(f"Total cost: {total:.2f} {currency}")
+
+        print(f"Total cost: {result['total']:.2f} {currency}")
 
     except (OSError, json.JSONDecodeError, ValueError) as error:
         print(f"Error: {error}")
