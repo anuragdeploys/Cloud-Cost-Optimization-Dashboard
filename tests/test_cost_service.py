@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from app.cost_service import (
     collect_and_save_aws_costs,
+    get_cost_insights,
     get_cost_summary,
     get_stored_cost_records,
     save_cost_records,
@@ -424,4 +425,61 @@ def test_get_stored_cost_records_passes_filters_to_database():
         start_date="2026-09-02",
         end_date="2026-09-03",
         database_file="test.db",
-    )    
+    ) 
+
+def test_get_cost_insights(tmp_path):
+    database_file = tmp_path / "test_costs.db"
+
+    initialize_database(database_file)
+
+    records = [
+        {
+            "date": "2026-09-01",
+            "service": "Amazon EC2",
+            "amount": 10.00,
+        },
+        {
+            "date": "2026-09-01",
+            "service": "Amazon S3",
+            "amount": 2.00,
+        },
+        {
+            "date": "2026-09-02",
+            "service": "Amazon EC2",
+            "amount": 11.00,
+        },
+        {
+            "date": "2026-09-02",
+            "service": "Amazon S3",
+            "amount": 2.50,
+        },
+        {
+            "date": "2026-09-03",
+            "service": "Amazon EC2",
+            "amount": 30.00,
+        },
+    ]
+
+    save_cost_records(
+        records=records,
+        currency="USD",
+        database_file=database_file,
+    )
+
+    result = get_cost_insights(
+        database_file=database_file,
+        spike_threshold=1.20,
+    )
+
+    assert result["service_ranking"][0][0] == "Amazon EC2"
+    assert result["service_ranking"][0][1] == pytest.approx(51.00)
+
+    assert result["service_ranking"][1][0] == "Amazon S3"
+    assert result["service_ranking"][1][1] == pytest.approx(4.50)
+
+    assert result["daily_totals"]["2026-09-01"] == pytest.approx(12.00)
+    assert result["daily_totals"]["2026-09-02"] == pytest.approx(13.50)
+    assert result["daily_totals"]["2026-09-03"] == pytest.approx(30.00)
+
+    assert len(result["daily_spikes"]) == 1
+    assert result["daily_spikes"][0]["date"] == "2026-09-03"    

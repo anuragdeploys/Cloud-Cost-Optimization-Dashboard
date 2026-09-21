@@ -3,6 +3,11 @@ from app.aws_cost_collector import (
     normalize_cost_response,
     validate_date_range,
 )
+from app.cost_analyzer import (
+    calculate_daily_totals,
+    detect_daily_spikes,
+    rank_services_by_cost,
+)
 from app.cost_collector import process_cost_records
 from app.database import get_cost_records, insert_cost_records
 
@@ -103,3 +108,45 @@ def get_cost_summary(
         ],
         records[0]["currency"] if records else "USD",
     )
+
+
+def get_cost_insights(
+    service=None,
+    start_date=None,
+    end_date=None,
+    database_file=None,
+    spike_threshold=1.20,
+):
+    """
+    Analyze stored costs and return optimization-oriented insights.
+
+    The analysis is rule-based and transparent.
+    """
+    records = get_stored_cost_records(
+        service=service,
+        start_date=start_date,
+        end_date=end_date,
+        database_file=database_file,
+    )
+
+    normalized_records = [
+        {
+            "date": record["date"],
+            "service": record["service"],
+            "amount": record["amount"],
+        }
+        for record in records
+    ]
+
+    return {
+        "service_ranking": rank_services_by_cost(
+            normalized_records
+        ),
+        "daily_totals": calculate_daily_totals(
+            normalized_records
+        ),
+        "daily_spikes": detect_daily_spikes(
+            normalized_records,
+            threshold=spike_threshold,
+        ),
+    }
