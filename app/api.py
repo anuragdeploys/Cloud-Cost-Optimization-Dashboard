@@ -2,6 +2,7 @@ from flask import Flask, jsonify, render_template, request
 
 from app.aws_cost_collector import validate_date_range
 from app.cost_service import (
+    get_cost_insights,
     get_cost_summary,
     get_stored_cost_records,
 )
@@ -108,6 +109,33 @@ def create_app(database_file=None):
             ), 400
 
         result = get_cost_summary(
+            service=service,
+            start_date=start_date,
+            end_date=end_date,
+            database_file=effective_database_file,
+        )
+
+        return jsonify(result)
+
+    @app.get("/costs/insights")
+    def cost_insights():
+        service = request.args.get("service")
+        start_date = request.args.get("start_date")
+        end_date = request.args.get("end_date")
+
+        date_error = validate_request_dates(
+            start_date,
+            end_date,
+        )
+
+        if date_error:
+            return jsonify(
+                {
+                    "error": date_error,
+                }
+            ), 400
+
+        result = get_cost_insights(
             service=service,
             start_date=start_date,
             end_date=end_date,

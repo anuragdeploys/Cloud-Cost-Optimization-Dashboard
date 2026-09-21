@@ -329,3 +329,82 @@ def test_cost_summary_rejects_invalid_date_order(tmp_path):
     assert response.get_json() == {
         "error": "End date must be later than start date."
     }
+
+
+def test_cost_insights_endpoint(tmp_path):
+    database_file = tmp_path / "test_costs.db"
+
+    initialize_database(database_file)
+
+    insert_cost_records(
+        records=[
+            {
+                "date": "2026-09-01",
+                "service": "Amazon EC2",
+                "amount": 10.00,
+            },
+            {
+                "date": "2026-09-01",
+                "service": "Amazon S3",
+                "amount": 2.00,
+            },
+            {
+                "date": "2026-09-02",
+                "service": "Amazon EC2",
+                "amount": 11.00,
+            },
+            {
+                "date": "2026-09-02",
+                "service": "Amazon S3",
+                "amount": 2.50,
+            },
+            {
+                "date": "2026-09-03",
+                "service": "Amazon EC2",
+                "amount": 30.00,
+            },
+        ],
+        currency="USD",
+        database_file=database_file,
+    )
+
+    app = create_app(database_file)
+    client = app.test_client()
+
+    response = client.get("/costs/insights")
+
+    assert response.status_code == 200
+
+    data = response.get_json()
+
+    assert data["service_ranking"][0][0] == "Amazon EC2"
+    assert data["service_ranking"][0][1] == pytest.approx(51.00)
+
+    assert data["service_ranking"][1][0] == "Amazon S3"
+    assert data["service_ranking"][1][1] == pytest.approx(4.50)
+
+    assert data["daily_totals"]["2026-09-01"] == pytest.approx(12.00)
+    assert data["daily_totals"]["2026-09-02"] == pytest.approx(13.50)
+    assert data["daily_totals"]["2026-09-03"] == pytest.approx(30.00)
+
+    assert len(data["daily_spikes"]) == 1
+    assert data["daily_spikes"][0]["date"] == "2026-09-03"
+
+
+def test_cost_insights_endpoint_rejects_invalid_date_order(tmp_path):
+    database_file = tmp_path / "test_costs.db"
+
+    app = create_app(database_file)
+    client = app.test_client()
+
+    response = client.get(
+        "/costs/insights?"
+        "start_date=2026-09-10&"
+        "end_date=2026-09-05"
+    )
+
+    assert response.status_code == 400
+
+    assert response.get_json() == {
+        "error": "End date must be later than start date."
+    }
