@@ -16,28 +16,47 @@ def get_cost_explorer_client():
 
 def get_daily_costs(start_date, end_date):
     """
-    Retrieve daily AWS costs grouped by AWS service.
+    Retrieve all daily AWS costs grouped by AWS service.
 
-    The end_date is exclusive, following the AWS Cost Explorer API format.
+    Cost Explorer may return results across multiple pages.
+    This function follows NextPageToken until all pages are retrieved.
     """
     client = get_cost_explorer_client()
 
-    response = client.get_cost_and_usage(
-        TimePeriod={
-            "Start": start_date,
-            "End": end_date,
-        },
-        Granularity="DAILY",
-        Metrics=["UnblendedCost"],
-        GroupBy=[
-            {
-                "Type": "DIMENSION",
-                "Key": "SERVICE",
-            }
-        ],
-    )
+    results = []
+    next_page_token = None
 
-    return response
+    while True:
+        request = {
+            "TimePeriod": {
+                "Start": start_date,
+                "End": end_date,
+            },
+            "Granularity": "DAILY",
+            "Metrics": ["UnblendedCost"],
+            "GroupBy": [
+                {
+                    "Type": "DIMENSION",
+                    "Key": "SERVICE",
+                }
+            ],
+        }
+
+        if next_page_token:
+            request["NextPageToken"] = next_page_token
+
+        response = client.get_cost_and_usage(**request)
+
+        results.extend(response.get("ResultsByTime", []))
+
+        next_page_token = response.get("NextPageToken")
+
+        if not next_page_token:
+            break
+
+    return {
+        "ResultsByTime": results,
+    }
 
 
 def normalize_cost_response(response):

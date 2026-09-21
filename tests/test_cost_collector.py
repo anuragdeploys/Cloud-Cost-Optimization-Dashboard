@@ -1,6 +1,8 @@
 import pytest
+from unittest.mock import MagicMock, patch
 
 from app.aws_cost_collector import (
+    get_daily_costs,
     normalize_cost_response,
     parse_arguments,
     validate_date_range,
@@ -264,6 +266,7 @@ def test_parse_arguments(monkeypatch):
     assert args.start_date == "2026-09-01"
     assert args.end_date == "2026-09-04"
 
+
 def test_validate_valid_date_range():
     validate_date_range("2026-09-01", "2026-09-04")
 
@@ -287,3 +290,84 @@ def test_validate_same_start_and_end_date():
         match="End date must be later than start date",
     ):
         validate_date_range("2026-09-01", "2026-09-01")
+
+
+def test_get_daily_costs_single_page():
+    fake_client = MagicMock()
+
+    fake_client.get_cost_and_usage.return_value = {
+        "ResultsByTime": [
+            {
+                "TimePeriod": {
+                    "Start": "2026-09-01",
+                    "End": "2026-09-02",
+                },
+                "Groups": [],
+                "Estimated": True,
+            }
+        ]
+    }
+
+    with patch(
+        "app.aws_cost_collector.get_cost_explorer_client",
+        return_value=fake_client,
+    ):
+        response = get_daily_costs("2026-09-01", "2026-09-02")
+
+    assert len(response["ResultsByTime"]) == 1
+    assert fake_client.get_cost_and_usage.call_count == 1
+
+    first_call = fake_client.get_cost_and_usage.call_args_list[0]
+
+    assert "NextPageToken" not in first_call.kwargs
+
+
+def test_get_daily_costs_multiple_pages():
+    fake_client = MagicMock()
+
+    first_page = {
+        "ResultsByTime": [
+            {
+                "TimePeriod": {
+                    "Start": "2026-09-01",
+                    "End": "2026-09-02",
+                },
+                "Groups": [],
+                "Estimated": True,
+            }
+        ],
+        "NextPageToken": "page-two-token",
+    }
+
+    second_page = {
+        "ResultsByTime": [
+            {
+                "TimePeriod": {
+                    "Start": "2026-09-02",
+                    "End": "2026-09-03",
+                },
+                "Groups": [],
+                "Estimated": True,
+            }
+        ]
+    }
+
+    fake_client.get_cost_and_usage.side_effect = [
+        first_page,
+        second_page,
+    ]
+
+    with patch(
+        "app.aws_cost_collector.get_cost_explorer_client",
+        return_value=fake_client,
+    ):
+        response = get_daily_costs("2026-09-01", "2026-09-03")
+
+    assert len(response["ResultsByTime"]) == 2
+    assert fake_client.get_cost_and_usage.call_count == 2
+
+    first_call = fake_client.get_cost_and_usage.call_args_list[0]
+    second_call = fake_client.get_cost_and_usage.call_args_list[1]
+
+    assert "NextPageToken" not in first_call.kwargs
+    assert second_call.kwargs["NextPageToken"] == "page-two-token"
