@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>Cloud Cost Optimization Dashboard</title>
 
@@ -25,6 +28,52 @@
     </header>
 
     <main class="container">
+
+        <section class="panel filters-panel">
+            <div class="panel-header">
+                <h2>Filters</h2>
+            </div>
+
+            <div class="filters">
+                <div class="filter-group">
+                    <label for="start-date">Start date</label>
+                    <input
+                        type="date"
+                        id="start-date"
+                    >
+                </div>
+
+                <div class="filter-group">
+                    <label for="end-date">End date</label>
+                    <input
+                        type="date"
+                        id="end-date"
+                    >
+                </div>
+
+                <div class="filter-group">
+                    <label for="service-filter">Service</label>
+                    <select id="service-filter">
+                        <option value="">All services</option>
+                    </select>
+                </div>
+
+                <div class="filter-actions">
+                    <button id="apply-filters">
+                        Apply
+                    </button>
+
+                    <button
+                        id="clear-filters"
+                        class="secondary-button"
+                    >
+                        Clear
+                    </button>
+                </div>
+            </div>
+
+            <p id="filter-error" class="filter-error"></p>
+        </section>
 
         <section class="summary-grid">
 
@@ -64,6 +113,16 @@
                     </tr>
                 </tbody>
             </table>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Daily Cost Trend</h2>
+            </div>
+
+            <div id="trend-container" class="trend-container">
+                <p>Loading...</p>
+            </div>
         </section>
 
         <section class="panel">

@@ -1,34 +1,107 @@
-async function loadDashboard() {
-    const status = document.getElementById("status");
+function buildQueryString() {
+    const params = new URLSearchParams();
 
-    try {
-        const summaryResponse = await fetch("/costs/summary");
-        const summary = await summaryResponse.json();
+    const startDate = document.getElementById("start-date").value;
+    const endDate = document.getElementById("end-date").value;
+    const service = document.getElementById("service-filter").value;
 
-        const recordsResponse = await fetch("/costs");
-        const recordsData = await recordsResponse.json();
+    if (startDate) {
+        params.set("start_date", startDate);
+    }
 
-        if (!summaryResponse.ok || !recordsResponse.ok) {
-            throw new Error("API request failed.");
-        }
+    if (endDate) {
+        params.set("end_date", endDate);
+    }
 
-        document.getElementById("total-cost").textContent =
-            `${summary.total.toFixed(2)} ${summary.currency}`;
+    if (service) {
+        params.set("service", service);
+    }
 
-        document.getElementById("record-count").textContent =
-            summary.record_count;
+    const query = params.toString();
 
-        document.getElementById("service-count").textContent =
-            Object.keys(summary.cost_by_service).length;
+    return query ? `?${query}` : "";
+}
 
-        const serviceTableBody =
-            document.getElementById("service-table-body");
 
-        serviceTableBody.innerHTML = "";
+function setFilterError(message) {
+    document.getElementById("filter-error").textContent = message;
+}
 
-        for (const [service, amount] of Object.entries(
-            summary.cost_by_service
-        )) {
+
+function clearFilterError() {
+    setFilterError("");
+}
+
+
+function validateFilters() {
+    const startDate = document.getElementById("start-date").value;
+    const endDate = document.getElementById("end-date").value;
+
+    if ((startDate && !endDate) || (!startDate && endDate)) {
+        return "Start date and end date must be provided together.";
+    }
+
+    if (startDate && endDate && startDate >= endDate) {
+        return "End date must be later than start date.";
+    }
+
+    return null;
+}
+
+
+function populateServiceFilter(summary) {
+    const select = document.getElementById("service-filter");
+    const currentValue = select.value;
+
+    select.innerHTML = "";
+
+    const allOption = document.createElement("option");
+    allOption.value = "";
+    allOption.textContent = "All services";
+    select.appendChild(allOption);
+
+    for (const service of Object.keys(summary.cost_by_service).sort()) {
+        const option = document.createElement("option");
+        option.value = service;
+        option.textContent = service;
+        select.appendChild(option);
+    }
+
+    if (
+        currentValue &&
+        Object.prototype.hasOwnProperty.call(
+            summary.cost_by_service,
+            currentValue
+        )
+    ) {
+        select.value = currentValue;
+    }
+}
+
+
+function renderServiceTable(summary) {
+    const tableBody =
+        document.getElementById("service-table-body");
+
+    tableBody.innerHTML = "";
+
+    const entries = Object.entries(summary.cost_by_service);
+
+    if (entries.length === 0) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+
+        cell.colSpan = 2;
+        cell.textContent = "No cost data found.";
+        row.appendChild(cell);
+        tableBody.appendChild(row);
+
+        return;
+    }
+
+    entries
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([service, amount]) => {
             const row = document.createElement("tr");
 
             const serviceCell = document.createElement("td");
@@ -41,43 +114,188 @@ async function loadDashboard() {
             row.appendChild(serviceCell);
             row.appendChild(amountCell);
 
-            serviceTableBody.appendChild(row);
+            tableBody.appendChild(row);
+        });
+}
+
+
+function renderRecords(records) {
+    const tableBody =
+        document.getElementById("records-table-body");
+
+    tableBody.innerHTML = "";
+
+    if (records.length === 0) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+
+        cell.colSpan = 4;
+        cell.textContent = "No cost records found.";
+        row.appendChild(cell);
+        tableBody.appendChild(row);
+
+        return;
+    }
+
+    for (const record of records) {
+        const row = document.createElement("tr");
+
+        const dateCell = document.createElement("td");
+        dateCell.textContent = record.date;
+
+        const serviceCell = document.createElement("td");
+        serviceCell.textContent = record.service;
+
+        const amountCell = document.createElement("td");
+        amountCell.textContent = record.amount.toFixed(2);
+
+        const currencyCell = document.createElement("td");
+        currencyCell.textContent = record.currency;
+
+        row.appendChild(dateCell);
+        row.appendChild(serviceCell);
+        row.appendChild(amountCell);
+        row.appendChild(currencyCell);
+
+        tableBody.appendChild(row);
+    }
+}
+
+
+function renderTrend(summary) {
+    const container =
+        document.getElementById("trend-container");
+
+    container.innerHTML = "";
+
+    const entries = Object.entries(summary.cost_by_date);
+
+    if (entries.length === 0) {
+        const message = document.createElement("p");
+        message.textContent = "No cost data found.";
+        container.appendChild(message);
+
+        return;
+    }
+
+    const maxAmount = Math.max(
+        ...entries.map((entry) => entry[1]),
+        0
+    );
+
+    for (const [date, amount] of entries) {
+        const row = document.createElement("div");
+        row.className = "trend-row";
+
+        const dateElement = document.createElement("div");
+        dateElement.className = "trend-date";
+        dateElement.textContent = date;
+
+        const barContainer = document.createElement("div");
+        barContainer.className = "trend-bar-container";
+
+        const bar = document.createElement("div");
+        bar.className = "trend-bar";
+
+        const width = maxAmount > 0
+            ? (amount / maxAmount) * 100
+            : 0;
+
+        bar.style.width = `${width}%`;
+
+        barContainer.appendChild(bar);
+
+        const amountElement = document.createElement("div");
+        amountElement.className = "trend-amount";
+        amountElement.textContent =
+            `${amount.toFixed(2)} ${summary.currency}`;
+
+        row.appendChild(dateElement);
+        row.appendChild(barContainer);
+        row.appendChild(amountElement);
+
+        container.appendChild(row);
+    }
+}
+
+
+async function loadDashboard() {
+    const status = document.getElementById("status");
+
+    try {
+        const query = buildQueryString();
+
+        const summaryResponse = await fetch(
+            `/costs/summary${query}`
+        );
+
+        const summary = await summaryResponse.json();
+
+        const recordsResponse = await fetch(
+            `/costs${query}`
+        );
+
+        const recordsData = await recordsResponse.json();
+
+        if (
+            !summaryResponse.ok ||
+            !recordsResponse.ok
+        ) {
+            throw new Error(
+                summary.error ||
+                recordsData.error ||
+                "API request failed."
+            );
         }
 
-        const recordsTableBody =
-            document.getElementById("records-table-body");
+        document.getElementById("total-cost").textContent =
+            `${summary.total.toFixed(2)} ${summary.currency}`;
 
-        recordsTableBody.innerHTML = "";
+        document.getElementById("record-count").textContent =
+            summary.record_count;
 
-        for (const record of recordsData.records) {
-            const row = document.createElement("tr");
+        document.getElementById("service-count").textContent =
+            Object.keys(summary.cost_by_service).length;
 
-            const dateCell = document.createElement("td");
-            dateCell.textContent = record.date;
-
-            const serviceCell = document.createElement("td");
-            serviceCell.textContent = record.service;
-
-            const amountCell = document.createElement("td");
-            amountCell.textContent = record.amount.toFixed(2);
-
-            const currencyCell = document.createElement("td");
-            currencyCell.textContent = record.currency;
-
-            row.appendChild(dateCell);
-            row.appendChild(serviceCell);
-            row.appendChild(amountCell);
-            row.appendChild(currencyCell);
-
-            recordsTableBody.appendChild(row);
-        }
+        populateServiceFilter(summary);
+        renderServiceTable(summary);
+        renderRecords(recordsData.records);
+        renderTrend(summary);
 
         status.textContent = "API connected";
+        clearFilterError();
     } catch (error) {
         console.error(error);
         status.textContent = "API error";
+        setFilterError(error.message);
     }
 }
+
+
+document
+    .getElementById("apply-filters")
+    .addEventListener("click", () => {
+        const error = validateFilters();
+
+        if (error) {
+            setFilterError(error);
+            return;
+        }
+
+        loadDashboard();
+    });
+
+
+document
+    .getElementById("clear-filters")
+    .addEventListener("click", () => {
+        document.getElementById("start-date").value = "";
+        document.getElementById("end-date").value = "";
+        document.getElementById("service-filter").value = "";
+
+        clearFilterError();
+        loadDashboard();
+    });
 
 
 loadDashboard();
