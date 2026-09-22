@@ -1,8 +1,10 @@
 import sqlite3
 from pathlib import Path
 
+from app.config import get_database_file
 
-DATABASE_FILE = Path(__file__).parent.parent / "database" / "costs.db"
+
+DATABASE_FILE = get_database_file()
 
 
 def get_connection(database_file=DATABASE_FILE):
@@ -105,10 +107,7 @@ def insert_cost_records(
             cursor = connection.execute(
                 """
                 INSERT OR IGNORE INTO cost_records (
-                    date,
-                    service,
-                    amount,
-                    currency
+                    date, service, amount, currency
                 )
                 VALUES (?, ?, ?, ?)
                 """,
