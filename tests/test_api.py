@@ -387,6 +387,19 @@ def test_cost_insights_endpoint(tmp_path):
     assert data["daily_totals"]["2026-09-02"] == pytest.approx(13.50)
     assert data["daily_totals"]["2026-09-03"] == pytest.approx(30.00)
 
+    assert data["daily_changes"][0]["date"] == "2026-09-01"
+    assert data["daily_changes"][0]["percentage_change"] is None
+
+    assert data["daily_changes"][1]["date"] == "2026-09-02"
+    assert data["daily_changes"][1]["percentage_change"] == pytest.approx(
+        12.50
+    )
+
+    assert data["daily_changes"][2]["date"] == "2026-09-03"
+    assert data["daily_changes"][2]["percentage_change"] == pytest.approx(
+        122.2222222222
+    )
+
     assert len(data["daily_spikes"]) == 1
     assert data["daily_spikes"][0]["date"] == "2026-09-03"
 
