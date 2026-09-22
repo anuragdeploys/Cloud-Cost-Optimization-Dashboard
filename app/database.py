@@ -7,6 +7,9 @@ DATABASE_FILE = Path(__file__).parent.parent / "database" / "costs.db"
 
 def get_connection(database_file=DATABASE_FILE):
     """Create and return a connection to the SQLite database."""
+    if database_file is None:
+        database_file = DATABASE_FILE
+
     return sqlite3.connect(database_file)
 
 
