@@ -61,6 +61,53 @@ def calculate_service_concentration(records):
         for service, amount in service_ranking
     ]
 
+def calculate_daily_cost_changes(records):
+    """
+    Calculate day-over-day cost percentage changes.
+
+    The first available day has no previous baseline and
+    therefore returns None for its percentage change.
+    """
+    daily_totals = calculate_daily_totals(records)
+    dates = list(daily_totals.keys())
+
+    changes = []
+
+    for index, date in enumerate(dates):
+        current_amount = daily_totals[date]
+
+        if index == 0:
+            changes.append(
+                {
+                    "date": date,
+                    "amount": current_amount,
+                    "previous_amount": None,
+                    "percentage_change": None,
+                }
+            )
+            continue
+
+        previous_date = dates[index - 1]
+        previous_amount = daily_totals[previous_date]
+
+        if previous_amount == 0:
+            percentage_change = None
+        else:
+            percentage_change = (
+                (current_amount - previous_amount)
+                / previous_amount
+            ) * 100
+
+        changes.append(
+            {
+                "date": date,
+                "amount": current_amount,
+                "previous_amount": previous_amount,
+                "percentage_change": percentage_change,
+            }
+        )
+
+    return changes
 
 def detect_daily_spikes(records, threshold=1.20):
     """
