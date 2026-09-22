@@ -81,11 +81,17 @@ function populateServiceFilter(summary) {
 }
 
 
-function renderServiceTable(summary) {
+function renderServiceTable(summary, insights) {
     const tableBody =
         document.getElementById("service-table-body");
 
     tableBody.innerHTML = "";
+
+    const concentrationMap = {};
+
+    for (const item of insights.service_concentration) {
+        concentrationMap[item.service] = item.percentage;
+    }
 
     const entries = Object.entries(
         summary.cost_by_service
@@ -95,7 +101,7 @@ function renderServiceTable(summary) {
         const row = document.createElement("tr");
         const cell = document.createElement("td");
 
-        cell.colSpan = 2;
+        cell.colSpan = 3;
         cell.textContent = "No cost data found.";
 
         row.appendChild(cell);
@@ -116,8 +122,18 @@ function renderServiceTable(summary) {
             amountCell.textContent =
                 `${amount.toFixed(2)} ${summary.currency}`;
 
+            const percentageCell =
+                document.createElement("td");
+
+            const percentage =
+                concentrationMap[service] ?? 0;
+
+            percentageCell.textContent =
+                `${percentage.toFixed(2)}%`;
+
             row.appendChild(serviceCell);
             row.appendChild(amountCell);
+            row.appendChild(percentageCell);
 
             tableBody.appendChild(row);
         });
@@ -379,7 +395,7 @@ async function loadDashboard() {
             ).length;
 
         populateServiceFilter(summary);
-        renderServiceTable(summary);
+        renderServiceTable(summary, insights);
         renderRecords(recordsData.records);
         renderTrend(summary);
         renderInsights(insights);
