@@ -42,7 +42,9 @@ def main():
 
     print("Cost collection completed successfully.")
     print(f"Period: {args.start_date} to {args.end_date}")
-    print(f"Records collected: {result['record_count']}")
+    print(f"Records received: {result['records_received']}")
+    print(f"Records inserted: {result['records_inserted']}")
+    print(f"Duplicates ignored: {result['duplicates_ignored']}")
     print(f"Total cost: {result['total']:.2f} {result['currency']}")
 
     return 0

@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from scripts.collect_costs import main, parse_arguments
 
@@ -54,7 +54,9 @@ def test_main_runs_collection_workflow(monkeypatch, capsys):
     )
 
     fake_result = {
-        "record_count": 9,
+        "records_received": 9,
+        "records_inserted": 9,
+        "duplicates_ignored": 0,
         "total": 47.19,
         "currency": "USD",
     }
@@ -76,5 +78,7 @@ def test_main_runs_collection_workflow(monkeypatch, capsys):
     output = capsys.readouterr().out
 
     assert "Cost collection completed successfully." in output
-    assert "Records collected: 9" in output
+    assert "Records received: 9" in output
+    assert "Records inserted: 9" in output
+    assert "Duplicates ignored: 0" in output
     assert "Total cost: 47.19 USD" in output
