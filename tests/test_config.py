@@ -68,3 +68,24 @@ def test_database_file_expands_home_directory(monkeypatch):
     expected = Path("~/custom-costs.db").expanduser()
 
     assert get_database_file() == expected
+
+def test_aws_collection_disabled_by_default(monkeypatch):
+    monkeypatch.delenv(
+        "ENABLE_AWS_COLLECTION",
+        raising=False,
+    )
+
+    from app.config import is_aws_collection_enabled
+
+    assert is_aws_collection_enabled() is False
+
+
+def test_aws_collection_enabled_when_configured(monkeypatch):
+    monkeypatch.setenv(
+        "ENABLE_AWS_COLLECTION",
+        "true",
+    )
+
+    from app.config import is_aws_collection_enabled
+
+    assert is_aws_collection_enabled() is True    

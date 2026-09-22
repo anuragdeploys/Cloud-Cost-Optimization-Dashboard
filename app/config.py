@@ -45,3 +45,15 @@ def get_database_file():
         return Path(configured_path).expanduser()
 
     return DEFAULT_DATABASE_FILE
+
+def is_aws_collection_enabled():
+    """
+    Return whether scheduled AWS collection is enabled.
+
+    Collection is disabled by default to avoid unintended
+    Cost Explorer API requests.
+    """
+    return os.getenv(
+        "ENABLE_AWS_COLLECTION",
+        "false",
+    ).lower() == "true"
