@@ -4,7 +4,9 @@ from app.aws_cost_collector import (
     validate_date_range,
 )
 from app.cost_analyzer import (
+    calculate_daily_cost_changes,    
     calculate_daily_totals,
+    calculate_service_concentration,
     detect_daily_spikes,
     rank_services_by_cost,
 )
@@ -151,7 +153,15 @@ def get_cost_insights(
         "service_ranking": rank_services_by_cost(
             normalized_records
         ),
+        "service_concentration": (
+            calculate_service_concentration(
+                normalized_records
+            )
+        ),
         "daily_totals": calculate_daily_totals(
+            normalized_records
+        ),
+        "daily_changes": calculate_daily_cost_changes(
             normalized_records
         ),
         "daily_spikes": detect_daily_spikes(
