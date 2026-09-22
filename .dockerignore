@@ -1,0 +1,11 @@
+venv/
+vene/
+.git/
+.pytest_cache/
+__pycache__/
+*.pyc
+database/
+logs/
+.env
+.aws/
+awscliv2.zip
