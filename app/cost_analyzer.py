@@ -36,6 +36,32 @@ def calculate_daily_totals(records):
     return dict(sorted(daily_totals.items()))
 
 
+def calculate_service_concentration(records):
+    """
+    Calculate each service's percentage of total cost.
+
+    Returns services ordered from highest concentration
+    to lowest concentration.
+    """
+    service_ranking = rank_services_by_cost(records)
+
+    total_cost = sum(
+        amount for _, amount in service_ranking
+    )
+
+    if total_cost == 0:
+        return []
+
+    return [
+        {
+            "service": service,
+            "amount": amount,
+            "percentage": (amount / total_cost) * 100,
+        }
+        for service, amount in service_ranking
+    ]
+
+
 def detect_daily_spikes(records, threshold=1.20):
     """
     Detect days whose cost is at least `threshold` times

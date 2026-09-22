@@ -2,6 +2,7 @@ import pytest
 
 from app.cost_analyzer import (
     calculate_daily_totals,
+    calculate_service_concentration,
     detect_daily_spikes,
     rank_services_by_cost,
 )
@@ -134,3 +135,38 @@ def test_detect_daily_spikes_identifies_spike():
     assert spike["amount"] == pytest.approx(30.00)
     assert spike["average_previous_amount"] == pytest.approx(10.50)
     assert spike["threshold"] == 1.20
+
+def test_calculate_service_concentration():
+    records = [
+        {
+            "date": "2026-09-01",
+            "service": "Amazon EC2",
+            "amount": 30.00,
+        },
+        {
+            "date": "2026-09-01",
+            "service": "Amazon S3",
+            "amount": 10.00,
+        },
+        {
+            "date": "2026-09-01",
+            "service": "AWS Lambda",
+            "amount": 10.00,
+        },
+    ]
+
+    result = calculate_service_concentration(records)
+
+    assert len(result) == 3
+
+    assert result[0]["service"] == "Amazon EC2"
+    assert result[0]["amount"] == pytest.approx(30.00)
+    assert result[0]["percentage"] == pytest.approx(60.00)
+
+    assert result[1]["service"] == "Amazon S3"
+    assert result[1]["amount"] == pytest.approx(10.00)
+    assert result[1]["percentage"] == pytest.approx(20.00)
+
+    assert result[2]["service"] == "AWS Lambda"
+    assert result[2]["amount"] == pytest.approx(10.00)
+    assert result[2]["percentage"] == pytest.approx(20.00)    
