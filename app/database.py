@@ -11,7 +11,7 @@ def get_connection(database_file=DATABASE_FILE):
 
 
 def initialize_database(database_file=DATABASE_FILE):
-    """Create the cost_records table if it does not already exist."""
+    """Create the cost_records table and uniqueness rule."""
     connection = get_connection(database_file)
 
     try:
@@ -23,6 +23,19 @@ def initialize_database(database_file=DATABASE_FILE):
                 service TEXT NOT NULL,
                 amount REAL NOT NULL,
                 currency TEXT NOT NULL
+            )
+            """
+        )
+
+        connection.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS
+            idx_cost_records_unique
+            ON cost_records (
+                date,
+                service,
+                amount,
+                currency
             )
             """
         )
@@ -40,13 +53,13 @@ def insert_cost_record(
     currency,
     database_file=DATABASE_FILE,
 ):
-    """Insert one cost record into the database."""
+    """Insert one cost record unless the exact record already exists."""
     connection = get_connection(database_file)
 
     try:
         connection.execute(
             """
-            INSERT INTO cost_records (
+            INSERT OR IGNORE INTO cost_records (
                 date,
                 service,
                 amount,
@@ -62,8 +75,13 @@ def insert_cost_record(
     finally:
         connection.close()
 
-def insert_cost_records(records, currency="USD", database_file=DATABASE_FILE):
-    """Insert multiple normalized cost records into the database."""
+
+def insert_cost_records(
+    records,
+    currency="USD",
+    database_file=DATABASE_FILE,
+):
+    """Insert multiple normalized cost records."""
     for record in records:
         insert_cost_record(
             date=record["date"],
