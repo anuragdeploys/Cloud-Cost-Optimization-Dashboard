@@ -34,11 +34,20 @@ def main():
     """Run the AWS cost collection workflow."""
     args = parse_arguments()
 
-    result = collect_and_save_aws_costs(
-        start_date=args.start_date,
-        end_date=args.end_date,
-        currency=args.currency,
-    )
+    try:
+        result = collect_and_save_aws_costs(
+            start_date=args.start_date,
+            end_date=args.end_date,
+            currency=args.currency,
+        )
+
+    except ValueError as error:
+        print(f"Collection failed: {error}")
+        return 1
+
+    except Exception as error:
+        print(f"Collection failed: {error}")
+        return 1
 
     print("Cost collection completed successfully.")
     print(f"Period: {args.start_date} to {args.end_date}")

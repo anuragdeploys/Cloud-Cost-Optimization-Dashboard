@@ -82,3 +82,63 @@ def test_main_runs_collection_workflow(monkeypatch, capsys):
     assert "Records inserted: 9" in output
     assert "Duplicates ignored: 0" in output
     assert "Total cost: 47.19 USD" in output
+
+
+def test_main_handles_invalid_date_range(monkeypatch, capsys):
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "collect_costs.py",
+            "--start-date",
+            "2026-09-10",
+            "--end-date",
+            "2026-09-05",
+        ],
+    )
+
+    with patch(
+        "scripts.collect_costs.collect_and_save_aws_costs",
+        side_effect=ValueError(
+            "End date must be later than start date."
+        ),
+    ):
+        result = main()
+
+    assert result == 1
+
+    output = capsys.readouterr().out
+
+    assert (
+        "Collection failed: "
+        "End date must be later than start date."
+    ) in output
+
+
+def test_main_handles_collection_failure(monkeypatch, capsys):
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "collect_costs.py",
+            "--start-date",
+            "2026-09-01",
+            "--end-date",
+            "2026-09-04",
+        ],
+    )
+
+    with patch(
+        "scripts.collect_costs.collect_and_save_aws_costs",
+        side_effect=RuntimeError(
+            "AWS Cost Explorer request failed."
+        ),
+    ):
+        result = main()
+
+    assert result == 1
+
+    output = capsys.readouterr().out
+
+    assert (
+        "Collection failed: "
+        "AWS Cost Explorer request failed."
+    ) in output
