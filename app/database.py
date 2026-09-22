@@ -53,11 +53,16 @@ def insert_cost_record(
     currency,
     database_file=DATABASE_FILE,
 ):
-    """Insert one cost record unless the exact record already exists."""
+    """
+    Insert one cost record.
+
+    Returns True when a new record is inserted.
+    Returns False when the exact record already exists.
+    """
     connection = get_connection(database_file)
 
     try:
-        connection.execute(
+        cursor = connection.execute(
             """
             INSERT OR IGNORE INTO cost_records (
                 date,
@@ -72,6 +77,8 @@ def insert_cost_record(
 
         connection.commit()
 
+        return cursor.rowcount == 1
+
     finally:
         connection.close()
 
@@ -81,15 +88,44 @@ def insert_cost_records(
     currency="USD",
     database_file=DATABASE_FILE,
 ):
-    """Insert multiple normalized cost records."""
-    for record in records:
-        insert_cost_record(
-            date=record["date"],
-            service=record["service"],
-            amount=record["amount"],
-            currency=currency,
-            database_file=database_file,
-        )
+    """
+    Insert multiple normalized cost records.
+
+    Returns the number of newly inserted records.
+    """
+    connection = get_connection(database_file)
+
+    try:
+        inserted_count = 0
+
+        for record in records:
+            cursor = connection.execute(
+                """
+                INSERT OR IGNORE INTO cost_records (
+                    date,
+                    service,
+                    amount,
+                    currency
+                )
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                    record["date"],
+                    record["service"],
+                    record["amount"],
+                    currency,
+                ),
+            )
+
+            if cursor.rowcount == 1:
+                inserted_count += 1
+
+        connection.commit()
+
+        return inserted_count
+
+    finally:
+        connection.close()
 
 
 def get_cost_records(

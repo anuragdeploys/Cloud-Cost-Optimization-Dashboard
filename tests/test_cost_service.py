@@ -38,6 +38,9 @@ def test_save_cost_records_returns_processed_summary(tmp_path):
     assert result["currency"] == "USD"
     assert result["record_count"] == 2
     assert result["total"] == pytest.approx(14.80)
+    assert result["records_received"] == 2
+    assert result["records_inserted"] == 2
+    assert result["duplicates_ignored"] == 0
 
     assert result["cost_by_service"] == {
         "Amazon EC2": 12.50,
@@ -482,4 +485,42 @@ def test_get_cost_insights(tmp_path):
     assert result["daily_totals"]["2026-09-03"] == pytest.approx(30.00)
 
     assert len(result["daily_spikes"]) == 1
-    assert result["daily_spikes"][0]["date"] == "2026-09-03"    
+    assert result["daily_spikes"][0]["date"] == "2026-09-03"
+
+def test_save_cost_records_reports_duplicates(tmp_path):
+    database_file = tmp_path / "test_costs.db"
+
+    initialize_database(database_file)
+
+    records = [
+        {
+            "date": "2026-09-01",
+            "service": "Amazon EC2",
+            "amount": 12.50,
+        },
+        {
+            "date": "2026-09-01",
+            "service": "Amazon S3",
+            "amount": 2.30,
+        },
+    ]
+
+    first_result = save_cost_records(
+        records=records,
+        currency="USD",
+        database_file=database_file,
+    )
+
+    second_result = save_cost_records(
+        records=records,
+        currency="USD",
+        database_file=database_file,
+    )
+
+    assert first_result["records_received"] == 2
+    assert first_result["records_inserted"] == 2
+    assert first_result["duplicates_ignored"] == 0
+
+    assert second_result["records_received"] == 2
+    assert second_result["records_inserted"] == 0
+    assert second_result["duplicates_ignored"] == 2    

@@ -16,21 +16,30 @@ def save_cost_records(records, currency="USD", database_file=None):
     """
     Validate and calculate cost records, then save them to the database.
 
-    Returns the processed cost summary.
+    Returns the processed cost summary together with storage statistics.
     """
     result = process_cost_records(records, currency)
 
     if database_file is None:
-        insert_cost_records(
+        inserted_count = insert_cost_records(
             records=records,
             currency=currency,
         )
     else:
-        insert_cost_records(
+        inserted_count = insert_cost_records(
             records=records,
             currency=currency,
             database_file=database_file,
         )
+
+    records_received = len(records)
+    duplicates_ignored = (
+        records_received - inserted_count
+    )
+
+    result["records_received"] = records_received
+    result["records_inserted"] = inserted_count
+    result["duplicates_ignored"] = duplicates_ignored
 
     return result
 
