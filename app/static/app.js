@@ -245,7 +245,6 @@ function renderInsights(insights) {
     if (rankedServices.length === 0) {
         topServices.textContent =
             "No cost data available.";
-
     } else {
         rankedServices
             .slice(0, 3)
@@ -270,22 +269,56 @@ function renderInsights(insights) {
     if (insights.daily_spikes.length === 0) {
         spikes.textContent =
             "No cost spikes detected.";
+    } else {
+        for (const spike of insights.daily_spikes) {
+            const item = document.createElement("div");
 
+            item.className = "spike-item";
+
+            item.textContent =
+                `${spike.date}: `
+                + `${spike.amount.toFixed(2)} USD `
+                + `(baseline: `
+                + `${spike.average_previous_amount.toFixed(2)} USD)`;
+
+            spikes.appendChild(item);
+        }
+    }
+
+    const dailyChanges =
+        document.getElementById("daily-cost-changes");
+
+    dailyChanges.innerHTML = "";
+
+    if (insights.daily_changes.length === 0) {
+        dailyChanges.textContent =
+            "No daily cost changes available.";
         return;
     }
 
-    for (const spike of insights.daily_spikes) {
+    for (const change of insights.daily_changes) {
         const item = document.createElement("div");
 
-        item.className = "spike-item";
+        item.className = "insight-item";
 
-        item.textContent =
-            `${spike.date}: `
-            + `${spike.amount.toFixed(2)} USD `
-            + `(baseline: `
-            + `${spike.average_previous_amount.toFixed(2)} USD)`;
+        if (change.percentage_change === null) {
+            item.textContent =
+                `${change.date}: baseline`;
+        } else {
+            const percentage =
+                change.percentage_change.toFixed(2);
 
-        spikes.appendChild(item);
+            const sign =
+                change.percentage_change > 0
+                    ? "+"
+                    : "";
+
+            item.textContent =
+                `${change.date}: `
+                + `${sign}${percentage}%`;
+        }
+
+        dailyChanges.appendChild(item);
     }
 }
 
