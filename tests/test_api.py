@@ -421,3 +421,20 @@ def test_cost_insights_endpoint_rejects_invalid_date_order(tmp_path):
     assert response.get_json() == {
         "error": "End date must be later than start date."
     }
+
+def test_security_headers(tmp_path):
+    database_file = tmp_path / "test_costs.db"
+
+    app = create_app(database_file)
+    client = app.test_client()
+
+    response = client.get("/health")
+
+    assert response.status_code == 200
+
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert (
+        response.headers["Referrer-Policy"]
+        == "strict-origin-when-cross-origin"
+    )    

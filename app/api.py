@@ -25,6 +25,17 @@ def create_app(database_file=None):
 
     app = Flask(__name__)
 
+    @app.after_request
+    def add_security_headers(response):
+        """Add baseline HTTP security headers."""
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = (
+            "strict-origin-when-cross-origin"
+        )
+
+        return response
+
     def validate_request_dates(start_date, end_date):
         """
         Validate optional API date parameters.
