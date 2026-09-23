@@ -35,3 +35,9 @@ jobs:
       - name: Build Docker image
         run: |
           docker build -t cloud-cost-dashboard:ci .
+
+      - name: Verify container is non-root
+        run: |
+          USER_ID=$(docker run --rm cloud-cost-dashboard:ci id -u)
+          test "$USER_ID" != "0"
+          echo "Container runs as UID $USER_ID"

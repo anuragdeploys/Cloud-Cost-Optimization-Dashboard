@@ -10,8 +10,12 @@ COPY app ./app
 COPY data ./data
 COPY scripts ./scripts
 
-RUN mkdir -p /app/database /app/logs
+RUN useradd --create-home --uid 10001 appuser \
+    && mkdir -p /app/database /app/logs \
+    && chown -R appuser:appuser /app/database /app/logs
 
 EXPOSE 5000
+
+USER appuser
 
 CMD ["python", "-m", "app.api"]
