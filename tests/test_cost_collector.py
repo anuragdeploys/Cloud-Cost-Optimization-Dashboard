@@ -428,3 +428,52 @@ def test_main_returns_one_for_invalid_dates(monkeypatch):
 
     assert result == 1
     mock_get_costs.assert_not_called()
+
+
+def test_get_daily_costs_repeated_page_token():
+    fake_client = MagicMock()
+
+    first_page = {
+        "ResultsByTime": [
+            {
+                "TimePeriod": {
+                    "Start": "2026-09-01",
+                    "End": "2026-09-02",
+                },
+                "Groups": [],
+                "Estimated": True,
+            }
+        ],
+        "NextPageToken": "same-token",
+    }
+
+    second_page = {
+        "ResultsByTime": [
+            {
+                "TimePeriod": {
+                    "Start": "2026-09-02",
+                    "End": "2026-09-03",
+                },
+                "Groups": [],
+                "Estimated": True,
+            }
+        ],
+        "NextPageToken": "same-token",
+    }
+
+    fake_client.get_cost_and_usage.side_effect = [
+        first_page,
+        second_page,
+    ]
+
+    with patch(
+        "app.aws_cost_collector.get_cost_explorer_client",
+        return_value=fake_client,
+    ):
+        with pytest.raises(
+            RuntimeError,
+            match="repeated pagination token",
+        ):
+            get_daily_costs("2026-09-01", "2026-09-03")
+
+    assert fake_client.get_cost_and_usage.call_count == 2

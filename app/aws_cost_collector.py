@@ -30,6 +30,7 @@ def get_daily_costs(start_date, end_date):
 
     results = []
     next_page_token = None
+    seen_page_tokens = set()
 
     while True:
         request = {
@@ -48,6 +49,12 @@ def get_daily_costs(start_date, end_date):
         }
 
         if next_page_token:
+            if next_page_token in seen_page_tokens:
+                raise RuntimeError(
+                    "AWS Cost Explorer returned a repeated pagination token."
+                )
+
+            seen_page_tokens.add(next_page_token)
             request["NextPageToken"] = next_page_token
 
         response = client.get_cost_and_usage(**request)
