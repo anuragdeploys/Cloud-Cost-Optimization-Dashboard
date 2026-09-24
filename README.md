@@ -1,4 +1,4 @@
-cat > README.md <<'README_EOF'
+
 # Cloud Cost Optimization Dashboard
 
 A lightweight cloud cost monitoring and analysis platform built with **Python, Flask, AWS Cost Explorer, and SQLite**.
@@ -678,4 +678,4 @@ GitHub Repository:
 
 https://github.com/anuragdeploys/cloud-cost-optimization-dashboard
 
-README_EOF
+
