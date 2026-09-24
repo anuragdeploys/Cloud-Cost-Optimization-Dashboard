@@ -375,6 +375,24 @@ def test_get_daily_costs_multiple_pages():
     assert "NextPageToken" not in first_call.kwargs
     assert second_call.kwargs["NextPageToken"] == "page-two-token"
 
+def test_get_cost_explorer_client_configures_standard_retries():
+    with patch("app.aws_cost_collector.boto3.Session") as mock_session:
+        fake_session = mock_session.return_value
+        fake_session.client.return_value = MagicMock()
+
+        from app.aws_cost_collector import get_cost_explorer_client
+
+        get_cost_explorer_client()
+
+        mock_session.assert_called_once()
+        fake_session.client.assert_called_once()
+
+        call_kwargs = fake_session.client.call_args.kwargs
+        retry_config = call_kwargs["config"]
+
+        assert retry_config.retries["mode"] == "standard"
+        assert retry_config.retries["max_attempts"] == 3
+
 
 def test_format_no_credentials_error():
     error = NoCredentialsError()
