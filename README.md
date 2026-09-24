@@ -1,4 +1,3 @@
-cat > README.md <<'EOF'
 # Cloud Cost Optimization Dashboard
 
 A Python-based cloud cost monitoring and optimization dashboard that collects,
