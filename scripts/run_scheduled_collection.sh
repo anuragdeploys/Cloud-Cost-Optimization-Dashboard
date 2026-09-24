@@ -10,7 +10,7 @@ mkdir -p "$LOG_DIR"
 
 cd "$PROJECT_DIR"
 
-source "$PROJECT_DIR/venv/bin/activate"
+source "$PROJECT_DIR/venv312/bin/activate"
 
 echo "----------------------------------------" >> "$LOG_FILE"
 echo "Scheduled collection started: $(date)" >> "$LOG_FILE"
@@ -22,7 +22,7 @@ raise SystemExit(
 )
 "; then
 
-    python -c "
+    if python -c "
 from app.scheduler import run_scheduled_collection
 
 result = run_scheduled_collection()
@@ -32,7 +32,21 @@ print(f'Records received: {result[\"records_received\"]}')
 print(f'Records inserted: {result[\"records_inserted\"]}')
 print(f'Duplicates ignored: {result[\"duplicates_ignored\"]}')
 print(f'Total cost: {result[\"total\"]:.2f} {result[\"currency\"]}')
-" >> "$LOG_FILE"
+" >> "$LOG_FILE" 2>&1; then
+
+        echo "Scheduled AWS collection succeeded." >> "$LOG_FILE"
+
+    else
+
+        collection_status=$?
+
+        echo "Scheduled AWS collection FAILED." >> "$LOG_FILE"
+        echo "Exit code: $collection_status" >> "$LOG_FILE"
+        echo "Scheduled collection finished: $(date)" >> "$LOG_FILE"
+
+        exit "$collection_status"
+
+    fi
 
 else
 
